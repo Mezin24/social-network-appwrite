@@ -23,7 +23,7 @@ export const SigninForm = () => {
   const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
   const navigate = useNavigate();
 
-  const { mutateAsync: signInAccount } = useSignInAccount();
+  const { mutateAsync: signInAccount, isPending } = useSignInAccount();
 
   const form = useForm<z.infer<typeof SigninValidation>>({
     resolver: zodResolver(SigninValidation),
@@ -34,17 +34,14 @@ export const SigninForm = () => {
   });
 
   async function onSubmit(values: z.infer<typeof SigninValidation>) {
-    console.log('1');
     const session = await signInAccount({
       email: values.email,
       password: values.password,
     });
 
-    console.log('2');
     if (!session) {
       return toast({ title: 'Sign on failed. Please try again.' });
     }
-    console.log(session);
     const isLoggedIn = await checkAuthUser();
 
     if (isLoggedIn) {
@@ -96,8 +93,12 @@ export const SigninForm = () => {
               </FormItem>
             )}
           />
-          <Button type='submit' className='shad-button_primary'>
-            {isUserLoading ? (
+          <Button
+            type='submit'
+            className='shad-button_primary'
+            disabled={isPending}
+          >
+            {isPending ? (
               <div className='flex items-center gap-2'>
                 <Loader /> Loading...
               </div>
