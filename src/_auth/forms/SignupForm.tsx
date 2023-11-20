@@ -9,18 +9,28 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { createUserAccount } from '@/lib/appwrite/api';
-import { appwriteConfig, avatars, databases } from '@/lib/appwrite/config';
+import { useUserContext } from '@/context/AuthContext';
+import {
+  useCreateUserAccount,
+  useSignInAccount,
+} from '@/lib/react-query/queriesAndMutations';
 import { SignupValidation } from '@/lib/validation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 export const SignupForm = () => {
-  const isLoading = false;
   const { toast } = useToast();
+  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
+  const navigate = useNavigate();
+
+  const { mutateAsync: createUserAccount, isPending: isCreatingUser } =
+    useCreateUserAccount();
+
+  const { mutateAsync: signInAccount, isPending: isSigningIn } =
+    useSignInAccount();
 
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation),
@@ -40,15 +50,30 @@ export const SignupForm = () => {
         title: 'Sign up failed. Please try again',
       });
 
-    // const session = await
-    //   console.log(response);
+    const session = await signInAccount({
+      email: values.email,
+      password: values.password,
+    });
+
+    if (!session) {
+      return toast({ title: 'Sign on failed. Please try again.' });
+    }
+
+    const isLoggedIn = await checkAuthUser();
+
+    if (isLoggedIn) {
+      form.reset();
+      navigate('/');
+    } else {
+      return toast({ title: 'Sign up failed. Please try again.' });
+    }
   }
   return (
     <Form {...form}>
-      <div className='sm:w-420 flex-center flex-col max-w-[70%]'>
+      <div className='sm:w-420 flex-center flex-col max-w-[70%] pb-5'>
         <img src='/assets/images/logo.svg' alt='logo' />
 
-        <h2 className='h3-bold md:h2-bold pt-5 sm:pt-12'>
+        <h2 className='h3-bold md:h2-bold pt-5 sm:pt-6'>
           Create a new account
         </h2>
         <p className='text-light-3 small-medium md:base-regular mt-2'>
@@ -112,12 +137,12 @@ export const SignupForm = () => {
             )}
           />
           <Button type='submit' className='shad-button_primary'>
-            {isLoading ? (
+            {isCreatingUser ? (
               <div className='flex items-center gap-2'>
                 <Loader /> Loading...
               </div>
             ) : (
-              'Submit'
+              'Sign up'
             )}
           </Button>
           <p className='text-small-regular text-light-2 text-center mt-2'>
